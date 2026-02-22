@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa desde Excel</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #490404;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+
+        #controls {
+            padding: 15px;
+            background: #ecf0f1;
+        }
+
+        #map {
+            height: 80vh;
+            width: 100%;
+        }
+
+        button {
+            padding: 10px 15px;
+            background: #640101;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2>Ubicar Direcciones desde Excel</h2>
+    </header>
+
+    <div id="controls">
+        <input type="file" id="excelFile" accept=".xlsx,.xls">
+        <button onclick="procesarExcel()">Cargar y Mostrar en Mapa</button>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Librerías -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+    <script>
+
+        // Inicializar mapa
+        const map = L.map('map').setView([-34.6, -58.45], 10); // Buenos Aires default
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        async function procesarExcel() {
+
+            const fileInput = document.getElementById('excelFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("Seleccioná un archivo Excel");
+                return;
+            }
+
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+            for (let row of jsonData) {
+
+                const direccion = row["direccion de obra"];
+                const localidad = row["localidad"];
+
+                if (!direccion || !localidad) continue;
+
+                const direccionCompleta = direccion + ", " + localidad + ", Argentina";
+
+                await geocodificar(direccionCompleta);
+            }
+        }
+
+        async function geocodificar(direccion) {
+
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    const lat = data[0].lat;
+                    const lon = data[0].lon;
+
+                    L.marker([lat, lon])
+                        .addTo(map)
+                        .bindPopup(direccion);
+                }
+
+            } catch (error) {
+                console.error("Error geocodificando:", direccion);
+            }
+
+            // Pequeña pausa para no bloquear la API
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+    </script>
+
+</body>
+
+</html>
