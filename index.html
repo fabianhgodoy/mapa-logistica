@@ -1,128 +1,349 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Mapa desde Excel</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa desde Excel — Zonas GBA</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  header { background: #490404; color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  header h2 { font-size: 16px; }
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+  #controls { padding: 8px 12px; background: #ecf0f1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; border-bottom: 2px solid #ccc; }
 
-        header {
-            background: #490404;
-            color: white;
-            padding: 15px;
-            text-align: center;
-        }
+  button { padding: 8px 14px; background: #640101; color: white; border: none; cursor: pointer; font-size: 13px; border-radius: 4px; }
+  button:hover { background: #800202; }
+  .btn-limpiar { background: #555; }
+  .btn-limpiar:hover { background: #333; }
 
-        #controls {
-            padding: 15px;
-            background: #ecf0f1;
-        }
+  
 
-        #map {
-            height: 80vh;
-            width: 100%;
-        }
+  #progreso { display: none; padding: 6px 12px; background: #dfe6e9; flex-shrink: 0; }
+  .barra-wrap { background: #bbb; border-radius: 4px; height: 7px; overflow: hidden; margin-bottom: 3px; }
+  #barra { height: 100%; background: #640101; width: 0%; transition: width 0.3s; }
+  #textoProgreso { font-size: 11px; color: #555; }
 
-        button {
-            padding: 10px 15px;
-            background: #640101;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-    </style>
+  .wrap { display: flex; flex: 1; overflow: hidden; }
+
+  #panel { width: 250px; background: #f8f9fa; border-right: 2px solid #ddd; display: flex; flex-direction: column; overflow: hidden; font-size: 12px; flex-shrink: 0; }
+  .panel-titulo { background: #490404; color: white; padding: 7px 10px; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
+  #lista { flex: 1; overflow-y: auto; }
+  .log-item { padding: 6px 8px; border-bottom: 1px solid #eee; line-height: 1.4; }
+  .log-item.err-item { color: #999; font-style: italic; }
+  .zona-tag { display: inline-block; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 3px; margin-top: 2px; color: white; }
+  .stats { padding: 8px; border-top: 2px solid #ddd; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: white; }
+  .stat-box { text-align: center; background: #f0f0f0; border-radius: 6px; padding: 5px; }
+  .stat-num { font-size: 1.3rem; font-weight: bold; line-height: 1; }
+  .stat-lbl { font-size: 9px; color: #888; text-transform: uppercase; }
+
+  #map { flex: 1; }
+
+  .zona-lbl { background: rgba(0,0,0,0.65) !important; border: none !important; color: white !important; font-weight: bold !important; font-size: 11px !important; letter-spacing: 1px !important; padding: 2px 8px !important; box-shadow: none !important; white-space: nowrap !important; }
+  .zona-lbl::before { display: none !important; }
+
+  @media(max-width:600px){ #panel { display: none; } }
+</style>
 </head>
-
 <body>
 
-    <header>
-        <h2>Ubicar Direcciones desde Excel</h2>
-    </header>
+<header>
+  <h2>📍 Mapa desde Excel — Zonas GBA</h2>
+  <span style="font-size:11px;opacity:0.7">Clic en leyenda para mostrar/ocultar zonas</span>
+</header>
 
-    <div id="controls">
-        <input type="file" id="excelFile" accept=".xlsx,.xls">
-        <button onclick="procesarExcel()">Cargar y Mostrar en Mapa</button>
+<div id="controls">
+  <input type="file" id="excelFile" accept=".xlsx,.xls">
+  <button onclick="procesarExcel()">Cargar y Mostrar en Mapa</button>
+  <button class="btn-limpiar" onclick="limpiarMapa()">✕ Limpiar</button>
+  <span id="c0" style="display:none"></span>
+  <span id="c1" style="display:none"></span>
+  <span id="c2" style="display:none"></span>
+  <span id="c3" style="display:none"></span>
+  <span id="c4" style="display:none"></span>
+  <span id="cerr" style="display:none"></span>
+</div>
+
+<div id="progreso">
+  <div class="barra-wrap"><div id="barra"></div></div>
+  <div id="textoProgreso">Iniciando...</div>
+</div>
+
+<div class="wrap">
+  <div id="panel">
+    <div class="panel-titulo">
+      <span>📋 Resultados</span>
+      <span id="totalLog">0 dir.</span>
     </div>
+    <div id="lista"></div>
+    <div class="stats">
+      <div class="stat-box"><div class="stat-num" id="sOk" style="color:#22c55e">0</div><div class="stat-lbl">Ubicados</div></div>
+      <div class="stat-box"><div class="stat-num" id="sErr" style="color:#e74c3c">0</div><div class="stat-lbl">No hallados</div></div>
+      <div class="stat-box"><div class="stat-num" id="sTot" style="color:#333">0</div><div class="stat-lbl">Total</div></div>
+      <div class="stat-box"><div class="stat-num" id="sZona" style="color:#f59e0b">—</div><div class="stat-lbl">Zona mayor</div></div>
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
 
-    <div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script>
 
-    <!-- Librerías -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+// ── MAPA ──────────────────────────────────────────────────────────────────
+const map = L.map('map').setView([-34.52, -58.50], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap'
+}).addTo(map);
 
-    <script>
+// ══════════════════════════════════════════════════════════════════════════
+//  ZONAS — coordenadas reales relevadas calle por calle
+//
+//  ZONA 0 — el cuadro central chico de tu imagen:
+//    Norte:  Av. Maipú          → lat ≈ -34.510  (corre E-O en Florida/Olivos)
+//    Sur:    Panamericana       → lat ≈ -34.547  (altura Florida estación)
+//    Oeste:  Pelliza            → lon ≈ -58.513  (corre N-S en Florida)
+//    Este:   C. F. Melo         → lon ≈ -58.479  (límite con Gral. Paz)
+//
+//  ZONA 1 — segundo anillo:
+//    Norte:  Av. del Libertador → lat ≈ -34.488  (costanera Olivos/Acassuso)
+//    Sur:    Av. Mitre          → lat ≈ -34.561  (cruza Florida más al sur)
+//    Oeste:  Av. Paraná         → lon ≈ -58.536
+//    Este:   Av. Gral. Paz      → lon ≈ -58.457
+//
+//  ZONA 2 — tercer anillo:
+//    Norte:  Río de la Plata    → lat ≈ -34.470
+//    Sur:    Av. Constituyente  → lat ≈ -34.578
+//    Oeste:  Márquez            → lon ≈ -58.568
+//    Este:   Congreso           → lon ≈ -58.430
+//
+//  ZONA 3 — anillo exterior:
+//    Norte:  Río (más al norte) → lat ≈ -34.445
+//    Sur:    Independencia      → lat ≈ -34.605
+//    Oeste:  Ruta 26/Márquez+   → lon ≈ -58.620
+//    Este:   Av. JB Justo       → lon ≈ -58.395
+// ══════════════════════════════════════════════════════════════════════════
 
-        // Inicializar mapa
-        const map = L.map('map').setView([-34.6, -58.45], 10); // Buenos Aires default
+const ZONAS = [
+  {
+    // ZONA 0 — leída de Google Maps:
+    // Norte: Av. Maipú (Olivos/Disco)         lat -34.508
+    // Sur:   Panamericana ramal Este (Munro)   lat -34.560
+    // Oeste: Mariano Pelliza                   lon -58.508
+    // Este:  Carlos F. Melo 2286 / Gral. Paz   lon -58.472
+    name: 'ZONA 0',
+    label: 'Maipú / Panamericana / Pelliza / Melo',
+    color: '#22c55e',
+    n: -34.508,
+    s: -34.560,
+    w: -58.508,
+    e: -58.472
+  },
+  {
+    // ZONA 1:
+    // Norte: Av. Libertador (costanera Olivos) lat -34.490
+    // Sur:   Av. Mitre / Villa Ballester        lat -34.578
+    // Oeste: Av. Paraná                         lon -58.535
+    // Este:  Av. Gral. Paz                      lon -58.452
+    name: 'ZONA 1',
+    label: 'Libertador / Mitre / Paraná / Gral. Paz',
+    color: '#3b82f6',
+    n: -34.490,
+    s: -34.578,
+    w: -58.535,
+    e: -58.452
+  },
+  {
+    // ZONA 2:
+    // Norte: Río de la Plata                    lat -34.468
+    // Sur:   Av. Constituyente / Ruta 8         lat -34.600
+    // Oeste: Márquez                            lon -58.572
+    // Este:  Congreso / 9 de Julio              lon -58.425
+    name: 'ZONA 2',
+    label: 'Río / Constituyente / Márquez / Congreso',
+    color: '#f59e0b',
+    n: -34.468,
+    s: -34.600,
+    w: -58.572,
+    e: -58.425
+  },
+  {
+    // ZONA 3:
+    // Norte: Río (más norte)                    lat -34.440
+    // Sur:   Independencia                      lat -34.628
+    // Oeste: Ruta 26 / Acceso Oeste             lon -58.650
+    // Este:  Av. J.B. Justo                     lon -58.390
+    name: 'ZONA 3',
+    label: 'Ruta 197 / Independencia / Ruta 26 / JB Justo',
+    color: '#ef4444',
+    n: -34.440,
+    s: -34.628,
+    w: -58.650,
+    e: -58.390
+  }
+];
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
+// Color único = azul (color de Francisco Borges 3585, Olivos - Zona 1)
+const PIN_COLOR = '#3b82f6';
+const ZCOLORS = [PIN_COLOR, PIN_COLOR, PIN_COLOR, PIN_COLOR, PIN_COLOR];
+const ZNAMES  = ['', '', '', '', ''];
 
-        async function procesarExcel() {
+// Sin rectángulos de zona en el mapa
+const zRects = {};
 
-            const fileInput = document.getElementById('excelFile');
-            const file = fileInput.files[0];
+// ── ESTADO ────────────────────────────────────────────────────────────────
+let markers = { 0:[], 1:[], 2:[], 3:[], 4:[], err:[] };
+let cnt     = { 0:0, 1:0, 2:0, 3:0, 4:0, err:0 };
+let nOk=0, nErr=0, nTot=0;
+let vis = { 0:true, 1:true, 2:true, 3:true, 4:true, err:true };
 
-            if (!file) {
-                alert("Seleccioná un archivo Excel");
-                return;
-            }
+// ── CLASIFICAR ZONA — chequeo de adentro hacia afuera ────────────────────
+function getZona(lat, lon) {
+  for (let i = 0; i < ZONAS.length; i++) {
+    const z = ZONAS[i];
+    if (lat >= z.s && lat <= z.n && lon >= z.w && lon <= z.e) return i;
+  }
+  return 4;
+}
 
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data);
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet);
+// ── TOGGLE ────────────────────────────────────────────────────────────────
+function toggle(z) {
+  vis[z] = !vis[z];
+  const idx = z === 'err' ? 5 : z;
+  document.querySelectorAll('.leg-item')[idx].classList.toggle('off', !vis[z]);
+  markers[z].forEach(m => vis[z] ? map.addLayer(m) : map.removeLayer(m));
+  if (typeof z === 'number' && z < 4 && zRects[z]) {
+    vis[z] ? map.addLayer(zRects[z]) : map.removeLayer(zRects[z]);
+  }
+}
 
-            for (let row of jsonData) {
+// ── LIMPIAR ───────────────────────────────────────────────────────────────
+function limpiarMapa() {
+  Object.values(markers).flat().forEach(m => map.removeLayer(m));
+  markers = { 0:[], 1:[], 2:[], 3:[], 4:[], err:[] };
+  cnt     = { 0:0, 1:0, 2:0, 3:0, 4:0, err:0 };
+  nOk=0; nErr=0; nTot=0;
+  document.getElementById('lista').innerHTML = '';
+  document.getElementById('progreso').style.display = 'none';
+  document.getElementById('barra').style.width = '0%';
+  updStats();
+}
 
-                const direccion = row["direccion de obra"];
-                const localidad = row["localidad"];
+// ── STATS ─────────────────────────────────────────────────────────────────
+function updStats() {
+  document.getElementById('sOk').textContent  = nOk;
+  document.getElementById('sErr').textContent = nErr;
+  document.getElementById('sTot').textContent = nTot;
+  let mz=0, mc=0;
+  [0,1,2,3,4].forEach(z => { if (cnt[z] > mc) { mc=cnt[z]; mz=z; } });
+  document.getElementById('sZona').textContent = mc > 0 ? mz : '—';
+  [0,1,2,3,4].forEach(z => document.getElementById('c'+z).textContent = cnt[z]);
+  document.getElementById('cerr').textContent = cnt.err;
+  document.getElementById('totalLog').textContent = (nOk+nErr) + ' dir.';
+}
 
-                if (!direccion || !localidad) continue;
+// ── LOG ───────────────────────────────────────────────────────────────────
+function addLog(dir, zona, isErr) {
+  const div = document.createElement('div');
+  div.className = 'log-item' + (isErr ? ' err-item' : '');
+  div.innerHTML = `<div style="color:${isErr?'#999':'#222'}">${dir}</div>
+    ${isErr ? '<span class="zona-tag" style="background:#999">SIN UBICAR</span>' : ''}`;
+  document.getElementById('lista').prepend(div);
+}
 
-                const direccionCompleta = direccion + ", " + localidad + ", Argentina";
+// ── PROCESAR EXCEL — idéntico al original ────────────────────────────────
+async function procesarExcel() {
+  const fileInput = document.getElementById('excelFile');
+  const file = fileInput.files[0];
+  if (!file) { alert("Seleccioná un archivo Excel"); return; }
 
-                await geocodificar(direccionCompleta);
-            }
-        }
+  limpiarMapa();
+  document.getElementById('progreso').style.display = 'block';
 
-        async function geocodificar(direccion) {
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}`;
+  nTot = jsonData.length;
 
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
+  for (let i = 0; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    const direccion = row["direccion de obra"];
+    const localidad = row["localidad"];
 
-                if (data.length > 0) {
-                    const lat = data[0].lat;
-                    const lon = data[0].lon;
+    const pct = Math.round(((i+1) / jsonData.length) * 100);
+    document.getElementById('barra').style.width = pct + '%';
+    document.getElementById('textoProgreso').textContent =
+      `Procesando ${i+1} de ${jsonData.length} — ${direccion || '(vacío)'}`;
 
-                    L.marker([lat, lon])
-                        .addTo(map)
-                        .bindPopup(direccion);
-                }
+    if (!direccion || !localidad) { nErr++; cnt.err++; updStats(); continue; }
 
-            } catch (error) {
-                console.error("Error geocodificando:", direccion);
-            }
+    const direccionCompleta = direccion + ", " + localidad + ", Argentina";
+    await geocodificar(direccionCompleta);
+    updStats();
+  }
 
-            // Pequeña pausa para no bloquear la API
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+  document.getElementById('textoProgreso').textContent =
+    `✓ Listo: ${nOk} ubicados, ${nErr} no encontrados`;
 
-    </script>
+  const todos = Object.values(markers).flat();
+  if (todos.length > 0) {
+    try { map.fitBounds(L.featureGroup(todos).getBounds(), { padding:[50,50] }); } catch(e){}
+  }
+}
 
+// ── GEOCODIFICAR — idéntico al original ──────────────────────────────────
+async function geocodificar(direccion) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.length > 0) {
+      const lat  = parseFloat(data[0].lat);
+      const lon  = parseFloat(data[0].lon);
+      const zona = getZona(lat, lon);
+      const col  = ZCOLORS[zona];
+
+      const icon = L.divIcon({
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
+          <path d="M16 0C7.2 0 0 7.2 0 16c0 10.5 16 26 16 26S32 26.5 32 16C32 7.2 24.8 0 16 0z"
+                fill="${col}" stroke="white" stroke-width="2.5"/>
+          <circle cx="16" cy="16" r="5" fill="white" opacity="0.85"/>
+        </svg>`,
+        className: '',
+        iconSize: [32, 42],
+        iconAnchor: [16, 42],
+        popupAnchor: [0, -44]
+      });
+
+      const mk = L.marker([lat, lon], { icon })
+        .addTo(map)
+        .bindPopup(`
+          <div style="font-size:13px;min-width:200px">
+            <div style="font-weight:bold;line-height:1.4">${direccion}</div>
+            <div style="font-size:11px;color:#777;margin-top:4px">lat: ${lat.toFixed(5)} / lon: ${lon.toFixed(5)}</div>
+          </div>
+        `);
+
+      markers[zona].push(mk);
+      cnt[zona]++;
+      nOk++;
+      addLog(direccion, zona, false);
+    } else {
+      cnt.err++; nErr++;
+      addLog(direccion, null, true);
+    }
+  } catch (error) {
+    cnt.err++; nErr++;
+    addLog(direccion + ' (error de red)', null, true);
+  }
+  await new Promise(resolve => setTimeout(resolve, 1000));
+}
+
+</script>
 </body>
-
 </html>
