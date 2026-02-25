@@ -1,349 +1,721 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa desde Excel — Zonas GBA</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Pesos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0e0c;
+            --surface: #1a1916;
+            --card: #222018;
+            --border: #35332d;
+            --accent: #e8a020;
+            --accent2: #f5c842;
+            --text: #f0ede8;
+            --muted: #8a8780;
+            --success: #4caf87;
+            --danger: #e05a3a;
+        }
 
-  header { background: #490404; color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-  header h2 { font-size: 16px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-  #controls { padding: 8px 12px; background: #ecf0f1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; border-bottom: 2px solid #ccc; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            background-image: radial-gradient(ellipse at 20% 10%, #2a220e44 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, #1a1208 0%, transparent 50%);
+        }
 
-  button { padding: 8px 14px; background: #640101; color: white; border: none; cursor: pointer; font-size: 13px; border-radius: 4px; }
-  button:hover { background: #800202; }
-  .btn-limpiar { background: #555; }
-  .btn-limpiar:hover { background: #333; }
+        header {
+            max-width: 800px;
+            margin: 0 auto 2.5rem;
+            display: flex;
+            align-items: flex-end;
+            gap: 1.2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
 
-  
+        .logo-icon {
+            width: 52px;
+            height: 52px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
 
-  #progreso { display: none; padding: 6px 12px; background: #dfe6e9; flex-shrink: 0; }
-  .barra-wrap { background: #bbb; border-radius: 4px; height: 7px; overflow: hidden; margin-bottom: 3px; }
-  #barra { height: 100%; background: #640101; width: 0%; transition: width 0.3s; }
-  #textoProgreso { font-size: 11px; color: #555; }
+        h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.4rem;
+            letter-spacing: 2px;
+            color: var(--text);
+            line-height: 1;
+        }
 
-  .wrap { display: flex; flex: 1; overflow: hidden; }
+        h1 span {
+            color: var(--accent);
+        }
 
-  #panel { width: 250px; background: #f8f9fa; border-right: 2px solid #ddd; display: flex; flex-direction: column; overflow: hidden; font-size: 12px; flex-shrink: 0; }
-  .panel-titulo { background: #490404; color: white; padding: 7px 10px; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
-  #lista { flex: 1; overflow-y: auto; }
-  .log-item { padding: 6px 8px; border-bottom: 1px solid #eee; line-height: 1.4; }
-  .log-item.err-item { color: #999; font-style: italic; }
-  .zona-tag { display: inline-block; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 3px; margin-top: 2px; color: white; }
-  .stats { padding: 8px; border-top: 2px solid #ddd; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; background: white; }
-  .stat-box { text-align: center; background: #f0f0f0; border-radius: 6px; padding: 5px; }
-  .stat-num { font-size: 1.3rem; font-weight: bold; line-height: 1; }
-  .stat-lbl { font-size: 9px; color: #888; text-transform: uppercase; }
+        .subtitle {
+            font-size: 0.82rem;
+            color: var(--muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
 
-  #map { flex: 1; }
+        .main {
+            max-width: 800px;
+            margin: 0 auto;
+        }
 
-  .zona-lbl { background: rgba(0,0,0,0.65) !important; border: none !important; color: white !important; font-weight: bold !important; font-size: 11px !important; letter-spacing: 1px !important; padding: 2px 8px !important; box-shadow: none !important; white-space: nowrap !important; }
-  .zona-lbl::before { display: none !important; }
+        /* INPUT SECTION */
+        .input-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.8rem;
+            margin-bottom: 1.5rem;
+        }
 
-  @media(max-width:600px){ #panel { display: none; } }
-</style>
+        .input-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .field-qty {
+            flex: 0 0 120px;
+        }
+
+        .field-search {
+            flex: 1 1 250px;
+        }
+
+        label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        input[type="number"],
+        input[type="text"] {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            padding: 0.75rem 1rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        #dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #2a2820;
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            z-index: 99;
+            max-height: 260px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 12px 40px #00000080;
+        }
+
+        #dropdown.open {
+            display: block;
+        }
+
+        .dd-item {
+            padding: 0.65rem 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid #35332d44;
+            transition: background 0.15s;
+        }
+
+        .dd-item:last-child {
+            border-bottom: none;
+        }
+
+        .dd-item:hover {
+            background: #35321e;
+        }
+
+        .dd-name {
+            font-size: 0.88rem;
+        }
+
+        .dd-cat {
+            font-size: 0.68rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: #e8a02018;
+            padding: 2px 7px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .dd-unit {
+            font-size: 0.72rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .dd-highlight {
+            color: var(--accent2);
+        }
+
+        .btn-add {
+            background: var(--accent);
+            color: #0f0e0c;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 600;
+            padding: 0.78rem 1.6rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s, transform 0.1s;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-add:hover {
+            background: var(--accent2);
+        }
+
+        .btn-add:active {
+            transform: scale(0.97);
+        }
+
+        /* RESULTS TABLE */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.visible {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .results-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.3rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+        }
+
+        .btn-clear {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            border-radius: 8px;
+            padding: 0.4rem 1rem;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-clear:hover {
+            background: #e05a3a22;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        thead tr {
+            background: #35332d;
+        }
+
+        th {
+            text-align: left;
+            font-size: 0.68rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+        }
+
+        td {
+            padding: 0.85rem 1rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #35332d44;
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: #2a2820;
+        }
+
+        .td-qty {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            color: var(--accent2);
+            letter-spacing: 1px;
+        }
+
+        .td-kg {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .td-ton {
+            color: var(--success);
+            font-size: 0.85rem;
+        }
+
+        .td-unit-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            display: block;
+        }
+
+        .btn-remove {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 2px 6px;
+            border-radius: 5px;
+            transition: color 0.2s, background 0.2s;
+        }
+
+        .btn-remove:hover {
+            color: var(--danger);
+            background: #e05a3a18;
+        }
+
+        /* TOTAL BAR */
+        .total-bar {
+            background: var(--accent);
+            border-radius: 12px;
+            padding: 1.2rem 1.6rem;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .total-label {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            color: #0f0e0c;
+        }
+
+        .total-vals {
+            display: flex;
+            gap: 2rem;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+
+        .total-kg {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.2rem;
+            color: #0f0e0c;
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .total-ton {
+            font-size: 1rem;
+            color: #0f0e0c;
+            font-weight: 600;
+            opacity: 0.75;
+        }
+
+        /* No results */
+        .no-results {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.8rem;
+            margin-top: 0.4rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        @media (max-width: 500px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .field-qty {
+                flex: 0 0 90px;
+            }
+
+            th:nth-child(3),
+            td:nth-child(3) {
+                display: none;
+            }
+        }
+    </style>
 </head>
+
 <body>
 
-<header>
-  <h2>📍 Mapa desde Excel — Zonas GBA</h2>
-  <span style="font-size:11px;opacity:0.7">Clic en leyenda para mostrar/ocultar zonas</span>
-</header>
+    <header>
+        <div class="logo-icon">⚖️</div>
+        <div>
+            <h1>FLORIDA<span>NORTE</span></h1>
+            <p class="subtitle">Calculadora de materiales de construcción</p>
+        </div>
+    </header>
 
-<div id="controls">
-  <input type="file" id="excelFile" accept=".xlsx,.xls">
-  <button onclick="procesarExcel()">Cargar y Mostrar en Mapa</button>
-  <button class="btn-limpiar" onclick="limpiarMapa()">✕ Limpiar</button>
-  <span id="c0" style="display:none"></span>
-  <span id="c1" style="display:none"></span>
-  <span id="c2" style="display:none"></span>
-  <span id="c3" style="display:none"></span>
-  <span id="c4" style="display:none"></span>
-  <span id="cerr" style="display:none"></span>
-</div>
+    <div class="main">
+        <div class="input-card">
+            <div class="input-row">
+                <div class="field field-qty">
+                    <label>Cantidad</label>
+                    <input type="number" id="qty" placeholder="160" min="0" step="any">
+                </div>
+                <div class="field field-search">
+                    <label>Producto</label>
+                    <div class="search-wrapper">
+                        <input type="text" id="search" placeholder="Ej: avellaneda, hueco 18..." autocomplete="off">
+                        <div id="dropdown"></div>
+                    </div>
+                    <span class="error-msg" id="error">Por favor elegí un producto de la lista.</span>
+                </div>
+                <button class="btn-add" onclick="addItem()">+ Agregar</button>
+            </div>
+        </div>
 
-<div id="progreso">
-  <div class="barra-wrap"><div id="barra"></div></div>
-  <div id="textoProgreso">Iniciando...</div>
-</div>
+        <div class="results-section" id="resultsSection">
+            <div class="results-header">
+                <span class="results-title">DETALLE DE CARGA</span>
+                <button class="btn-clear" onclick="clearAll()">✕ Limpiar todo</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cant.</th>
+                        <th>Unidad</th>
+                        <th>Kg/un</th>
+                        <th>Total Kg</th>
+                        <th>Toneladas</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+            <div class="total-bar">
+                <span class="total-label">PESO TOTAL</span>
+                <div class="total-vals">
+                    <span class="total-kg" id="totalKg">0 KG</span>
+                    <span class="total-ton" id="totalTon">0 ton</span>
+                </div>
+            </div>
+        </div>
 
-<div class="wrap">
-  <div id="panel">
-    <div class="panel-titulo">
-      <span>📋 Resultados</span>
-      <span id="totalLog">0 dir.</span>
+        <div class="no-results" id="emptyState">
+            Agregá productos para calcular el peso total de tu carga.
+        </div>
     </div>
-    <div id="lista"></div>
-    <div class="stats">
-      <div class="stat-box"><div class="stat-num" id="sOk" style="color:#22c55e">0</div><div class="stat-lbl">Ubicados</div></div>
-      <div class="stat-box"><div class="stat-num" id="sErr" style="color:#e74c3c">0</div><div class="stat-lbl">No hallados</div></div>
-      <div class="stat-box"><div class="stat-num" id="sTot" style="color:#333">0</div><div class="stat-lbl">Total</div></div>
-      <div class="stat-box"><div class="stat-num" id="sZona" style="color:#f59e0b">—</div><div class="stat-lbl">Zona mayor</div></div>
-    </div>
-  </div>
-  <div id="map"></div>
-</div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script>
+    <script>
+        const PRODUCTS = [
+            // CEMENTOS
+            { name: "Holcim", cat: "Cemento", unit: "bolsa", kgPerUnit: 25 },
+            { name: "Avellaneda", cat: "Cemento", unit: "bolsa", kgPerUnit: 25 },
+            // CALES
+            { name: "Cal Hidrat / Cal Común", cat: "Cal", unit: "bolsa", kgPerUnit: 25 },
+            { name: "Cal Milagro", cat: "Cal", unit: "bolsa", kgPerUnit: 25 },
+            // CEMENTO DE ALBAÑILERÍA
+            { name: "Hidralit / Plasticor", cat: "Cem. Albañilería", unit: "bolsa", kgPerUnit: 20 },
+            { name: "Maestro (Holcim)", cat: "Cem. Albañilería", unit: "bolsa", kgPerUnit: 25 },
+            // YESOS
+            { name: "Yeso Tuyango Tradicional 30kg", cat: "Yeso", unit: "bolsa", kgPerUnit: 30 },
+            { name: "Yeso Tuyango Proyectable SG 30kg", cat: "Yeso", unit: "bolsa", kgPerUnit: 30 },
+            { name: "Yeso Tuyango AP 25kg", cat: "Yeso", unit: "bolsa", kgPerUnit: 25 },
+            { name: "Yeso Alpress Proyectable 35kg", cat: "Yeso", unit: "bolsa", kgPerUnit: 35 },
+            { name: "Yeso Corral 40kg", cat: "Yeso", unit: "bolsa", kgPerUnit: 40 },
+            // ADHESIVOS
+            { name: "Perfecto x25 (todos)", cat: "Adhesivo", unit: "bolsa", kgPerUnit: 25 },
+            { name: "Klaukol x25 (todos)", cat: "Adhesivo", unit: "bolsa", kgPerUnit: 25 },
+            { name: "Weber x25 (todos)", cat: "Adhesivo", unit: "bolsa", kgPerUnit: 25 },
+            { name: "Holcim Tector x25", cat: "Adhesivo", unit: "bolsa", kgPerUnit: 25 },
+            // MORTEROS
+            { name: "Fino a la Cal x25", cat: "Mortero", unit: "bolsa", kgPerUnit: 25 },
+            { name: "Promex x30", cat: "Mortero", unit: "bolsa", kgPerUnit: 30 },
+            { name: "Mortero Retak x30", cat: "Mortero", unit: "bolsa", kgPerUnit: 30 },
+            { name: "Base Coat Weber x30", cat: "Mortero", unit: "bolsa", kgPerUnit: 30 },
+            // ÁRIDOS
+            { name: "Arena / Piedra Partida 6/20 / Cascote", cat: "Árido", unit: "m³", kgPerUnit: 1350 },
+            { name: "Arena / Piedra - Bolsón", cat: "Árido", unit: "bolsón", kgPerUnit: 1000 },
+            { name: "Arena / Piedra - Bolsa", cat: "Árido", unit: "bolsa", kgPerUnit: 30 },
+            // LADRILLOS
+            { name: "Ladrillo Común", cat: "Ladrillo", unit: "un", kgPerUnit: 1.65 },
+            { name: "Ladrillo Chacabuco / Córdoba", cat: "Ladrillo", unit: "un", kgPerUnit: 2.00 },
+            { name: "Ladrillo Hueco 8", cat: "Ladrillo", unit: "un", kgPerUnit: 3.50 },
+            { name: "Ladrillo Hueco 12", cat: "Ladrillo", unit: "un", kgPerUnit: 4.60 },
+            { name: "Ladrillo Hueco 18", cat: "Ladrillo", unit: "un", kgPerUnit: 6.40 },
+            { name: "Portante 12", cat: "Ladrillo", unit: "un", kgPerUnit: 5.60 },
+            { name: "Portante 18", cat: "Ladrillo", unit: "un", kgPerUnit: 7.50 },
+            { name: "Retak 7.5", cat: "Ladrillo", unit: "un", kgPerUnit: 6.25 },
+            { name: "Retak 10", cat: "Ladrillo", unit: "un", kgPerUnit: 8.33 },
+            { name: "Retak 12.5", cat: "Ladrillo", unit: "un", kgPerUnit: 10.42 },
+            { name: "Retak 15", cat: "Ladrillo", unit: "un", kgPerUnit: 12.50 },
+            { name: "Retak 17.5", cat: "Ladrillo", unit: "un", kgPerUnit: 13.89 },
+            { name: "Retak 20", cat: "Ladrillo", unit: "un", kgPerUnit: 17.86 },
+            { name: "Ladrillo Cemento 13", cat: "Ladrillo", unit: "un", kgPerUnit: 13.00 },
+            { name: "Ladrillo Cemento 19", cat: "Ladrillo", unit: "un", kgPerUnit: 19.00 },
+            // HIERROS - VARILLAS
+            { name: "Varilla 6 (barra 12mts)", cat: "Hierro", unit: "barra", kgPerUnit: 2.66 },
+            { name: "Varilla 8 (barra 12mts)", cat: "Hierro", unit: "barra", kgPerUnit: 4.74 },
+            { name: "Varilla 10 (barra 12mts)", cat: "Hierro", unit: "barra", kgPerUnit: 7.40 },
+            { name: "Varilla 12 (barra 12mts)", cat: "Hierro", unit: "barra", kgPerUnit: 10.66 },
+            { name: "Varilla 16 (barra 12mts)", cat: "Hierro", unit: "barra", kgPerUnit: 18.96 },
+            { name: "Varilla 20 (barra 12mts)", cat: "Hierro", unit: "barra", kgPerUnit: 29.64 },
+            { name: "Varilla 25 (barra 12mts)", cat: "Hierro", unit: "barra", kgPerUnit: 46.20 },
+            { name: "KG ADN", cat: "Hierro", unit: "kg", kgPerUnit: 1 },
+            // MALLAS
+            { name: "Malla 4 15x25 (5x2) Cerr.", cat: "Malla", unit: "un", kgPerUnit: 8.86 },
+            { name: "Malla 4 15x15 (5x2) Cerr.", cat: "Malla", unit: "un", kgPerUnit: 11.30 },
+            { name: "Malla 6 15x15 Q131 Mini (3x2.4)", cat: "Malla", unit: "un", kgPerUnit: 14.80 },
+            { name: "Malla 6 15x15 Q131 (6x2.4)", cat: "Malla", unit: "un", kgPerUnit: 29.60 },
+            { name: "Malla 8 15x15 Q257 (6x2.4)", cat: "Malla", unit: "un", kgPerUnit: 58.00 },
+            { name: "Malla 6 Q188 15x15 (6x2.4)", cat: "Malla", unit: "un", kgPerUnit: 42.62 },
+            { name: "Malla 8 Q335 (6x2.4)", cat: "Malla", unit: "un", kgPerUnit: 75.76 },
+            { name: "Malla 10 Q524 (6x2.4)", cat: "Malla", unit: "un", kgPerUnit: 118.38 },
+            // VIGUETAS
+            { name: "Vigas (por metro lineal)", cat: "Vigueta", unit: "ml", kgPerUnit: 15 },
+            // EPS
+            { name: "EPS 10x42x100", cat: "Bloque EPS", unit: "un", kgPerUnit: 0.5 },
+            { name: "EPS 12x42x100", cat: "Bloque EPS", unit: "un", kgPerUnit: 0.5 },
+            { name: "EPS 16x42x100", cat: "Bloque EPS", unit: "un", kgPerUnit: 0.5 },
+        ];
 
-// ── MAPA ──────────────────────────────────────────────────────────────────
-const map = L.map('map').setView([-34.52, -58.50], 13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap'
-}).addTo(map);
+        let items = [];
+        let selectedProduct = null;
 
-// ══════════════════════════════════════════════════════════════════════════
-//  ZONAS — coordenadas reales relevadas calle por calle
-//
-//  ZONA 0 — el cuadro central chico de tu imagen:
-//    Norte:  Av. Maipú          → lat ≈ -34.510  (corre E-O en Florida/Olivos)
-//    Sur:    Panamericana       → lat ≈ -34.547  (altura Florida estación)
-//    Oeste:  Pelliza            → lon ≈ -58.513  (corre N-S en Florida)
-//    Este:   C. F. Melo         → lon ≈ -58.479  (límite con Gral. Paz)
-//
-//  ZONA 1 — segundo anillo:
-//    Norte:  Av. del Libertador → lat ≈ -34.488  (costanera Olivos/Acassuso)
-//    Sur:    Av. Mitre          → lat ≈ -34.561  (cruza Florida más al sur)
-//    Oeste:  Av. Paraná         → lon ≈ -58.536
-//    Este:   Av. Gral. Paz      → lon ≈ -58.457
-//
-//  ZONA 2 — tercer anillo:
-//    Norte:  Río de la Plata    → lat ≈ -34.470
-//    Sur:    Av. Constituyente  → lat ≈ -34.578
-//    Oeste:  Márquez            → lon ≈ -58.568
-//    Este:   Congreso           → lon ≈ -58.430
-//
-//  ZONA 3 — anillo exterior:
-//    Norte:  Río (más al norte) → lat ≈ -34.445
-//    Sur:    Independencia      → lat ≈ -34.605
-//    Oeste:  Ruta 26/Márquez+   → lon ≈ -58.620
-//    Este:   Av. JB Justo       → lon ≈ -58.395
-// ══════════════════════════════════════════════════════════════════════════
+        const searchInput = document.getElementById('search');
+        const dropdown = document.getElementById('dropdown');
+        const qtyInput = document.getElementById('qty');
+        const errorEl = document.getElementById('error');
 
-const ZONAS = [
-  {
-    // ZONA 0 — leída de Google Maps:
-    // Norte: Av. Maipú (Olivos/Disco)         lat -34.508
-    // Sur:   Panamericana ramal Este (Munro)   lat -34.560
-    // Oeste: Mariano Pelliza                   lon -58.508
-    // Este:  Carlos F. Melo 2286 / Gral. Paz   lon -58.472
-    name: 'ZONA 0',
-    label: 'Maipú / Panamericana / Pelliza / Melo',
-    color: '#22c55e',
-    n: -34.508,
-    s: -34.560,
-    w: -58.508,
-    e: -58.472
-  },
-  {
-    // ZONA 1:
-    // Norte: Av. Libertador (costanera Olivos) lat -34.490
-    // Sur:   Av. Mitre / Villa Ballester        lat -34.578
-    // Oeste: Av. Paraná                         lon -58.535
-    // Este:  Av. Gral. Paz                      lon -58.452
-    name: 'ZONA 1',
-    label: 'Libertador / Mitre / Paraná / Gral. Paz',
-    color: '#3b82f6',
-    n: -34.490,
-    s: -34.578,
-    w: -58.535,
-    e: -58.452
-  },
-  {
-    // ZONA 2:
-    // Norte: Río de la Plata                    lat -34.468
-    // Sur:   Av. Constituyente / Ruta 8         lat -34.600
-    // Oeste: Márquez                            lon -58.572
-    // Este:  Congreso / 9 de Julio              lon -58.425
-    name: 'ZONA 2',
-    label: 'Río / Constituyente / Márquez / Congreso',
-    color: '#f59e0b',
-    n: -34.468,
-    s: -34.600,
-    w: -58.572,
-    e: -58.425
-  },
-  {
-    // ZONA 3:
-    // Norte: Río (más norte)                    lat -34.440
-    // Sur:   Independencia                      lat -34.628
-    // Oeste: Ruta 26 / Acceso Oeste             lon -58.650
-    // Este:  Av. J.B. Justo                     lon -58.390
-    name: 'ZONA 3',
-    label: 'Ruta 197 / Independencia / Ruta 26 / JB Justo',
-    color: '#ef4444',
-    n: -34.440,
-    s: -34.628,
-    w: -58.650,
-    e: -58.390
-  }
-];
+        function normalize(str) {
+            return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
 
-// Color único = azul (color de Francisco Borges 3585, Olivos - Zona 1)
-const PIN_COLOR = '#3b82f6';
-const ZCOLORS = [PIN_COLOR, PIN_COLOR, PIN_COLOR, PIN_COLOR, PIN_COLOR];
-const ZNAMES  = ['', '', '', '', ''];
+        function highlight(text, query) {
+            if (!query) return text;
+            const norm = normalize(query);
+            const normText = normalize(text);
+            const idx = normText.indexOf(norm);
+            if (idx === -1) return text;
+            return text.slice(0, idx) + '<span class="dd-highlight">' + text.slice(idx, idx + query.length) + '</span>' + text.slice(idx + query.length);
+        }
 
-// Sin rectángulos de zona en el mapa
-const zRects = {};
+        function filterProducts(query) {
+            if (!query) return PRODUCTS;
+            const q = normalize(query);
+            return PRODUCTS.filter(p => normalize(p.name).includes(q) || normalize(p.cat).includes(q));
+        }
 
-// ── ESTADO ────────────────────────────────────────────────────────────────
-let markers = { 0:[], 1:[], 2:[], 3:[], 4:[], err:[] };
-let cnt     = { 0:0, 1:0, 2:0, 3:0, 4:0, err:0 };
-let nOk=0, nErr=0, nTot=0;
-let vis = { 0:true, 1:true, 2:true, 3:true, 4:true, err:true };
+        function renderDropdown(query) {
+            const results = filterProducts(query);
+            if (!results.length) {
+                dropdown.innerHTML = '<div class="dd-item" style="color:var(--muted);cursor:default">Sin resultados</div>';
+            } else {
+                dropdown.innerHTML = results.map((p, i) => `
+      <div class="dd-item" data-idx="${PRODUCTS.indexOf(p)}">
+        <span class="dd-name">${highlight(p.name, query)}</span>
+        <span class="dd-cat">${p.cat}</span>
+        <span class="dd-unit">${p.kgPerUnit} kg/${p.unit}</span>
+      </div>
+    `).join('');
+                dropdown.querySelectorAll('.dd-item[data-idx]').forEach(el => {
+                    el.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        const idx = parseInt(el.dataset.idx);
+                        selectProduct(PRODUCTS[idx]);
+                    });
+                });
+            }
+            dropdown.classList.add('open');
+        }
 
-// ── CLASIFICAR ZONA — chequeo de adentro hacia afuera ────────────────────
-function getZona(lat, lon) {
-  for (let i = 0; i < ZONAS.length; i++) {
-    const z = ZONAS[i];
-    if (lat >= z.s && lat <= z.n && lon >= z.w && lon <= z.e) return i;
-  }
-  return 4;
-}
+        function selectProduct(p) {
+            selectedProduct = p;
+            searchInput.value = p.name;
+            dropdown.classList.remove('open');
+            errorEl.classList.remove('show');
+        }
 
-// ── TOGGLE ────────────────────────────────────────────────────────────────
-function toggle(z) {
-  vis[z] = !vis[z];
-  const idx = z === 'err' ? 5 : z;
-  document.querySelectorAll('.leg-item')[idx].classList.toggle('off', !vis[z]);
-  markers[z].forEach(m => vis[z] ? map.addLayer(m) : map.removeLayer(m));
-  if (typeof z === 'number' && z < 4 && zRects[z]) {
-    vis[z] ? map.addLayer(zRects[z]) : map.removeLayer(zRects[z]);
-  }
-}
+        searchInput.addEventListener('input', () => {
+            selectedProduct = null;
+            renderDropdown(searchInput.value.trim());
+        });
 
-// ── LIMPIAR ───────────────────────────────────────────────────────────────
-function limpiarMapa() {
-  Object.values(markers).flat().forEach(m => map.removeLayer(m));
-  markers = { 0:[], 1:[], 2:[], 3:[], 4:[], err:[] };
-  cnt     = { 0:0, 1:0, 2:0, 3:0, 4:0, err:0 };
-  nOk=0; nErr=0; nTot=0;
-  document.getElementById('lista').innerHTML = '';
-  document.getElementById('progreso').style.display = 'none';
-  document.getElementById('barra').style.width = '0%';
-  updStats();
-}
+        searchInput.addEventListener('focus', () => {
+            renderDropdown(searchInput.value.trim());
+        });
 
-// ── STATS ─────────────────────────────────────────────────────────────────
-function updStats() {
-  document.getElementById('sOk').textContent  = nOk;
-  document.getElementById('sErr').textContent = nErr;
-  document.getElementById('sTot').textContent = nTot;
-  let mz=0, mc=0;
-  [0,1,2,3,4].forEach(z => { if (cnt[z] > mc) { mc=cnt[z]; mz=z; } });
-  document.getElementById('sZona').textContent = mc > 0 ? mz : '—';
-  [0,1,2,3,4].forEach(z => document.getElementById('c'+z).textContent = cnt[z]);
-  document.getElementById('cerr').textContent = cnt.err;
-  document.getElementById('totalLog').textContent = (nOk+nErr) + ' dir.';
-}
+        searchInput.addEventListener('blur', () => {
+            setTimeout(() => dropdown.classList.remove('open'), 150);
+        });
 
-// ── LOG ───────────────────────────────────────────────────────────────────
-function addLog(dir, zona, isErr) {
-  const div = document.createElement('div');
-  div.className = 'log-item' + (isErr ? ' err-item' : '');
-  div.innerHTML = `<div style="color:${isErr?'#999':'#222'}">${dir}</div>
-    ${isErr ? '<span class="zona-tag" style="background:#999">SIN UBICAR</span>' : ''}`;
-  document.getElementById('lista').prepend(div);
-}
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') addItem();
+        });
 
-// ── PROCESAR EXCEL — idéntico al original ────────────────────────────────
-async function procesarExcel() {
-  const fileInput = document.getElementById('excelFile');
-  const file = fileInput.files[0];
-  if (!file) { alert("Seleccioná un archivo Excel"); return; }
+        function addItem() {
+            const qty = parseFloat(qtyInput.value);
+            if (!selectedProduct) {
+                errorEl.classList.add('show');
+                searchInput.focus();
+                return;
+            }
+            if (!qty || qty <= 0) {
+                qtyInput.focus();
+                return;
+            }
+            errorEl.classList.remove('show');
+            const totalKg = qty * selectedProduct.kgPerUnit;
+            items.push({ ...selectedProduct, qty, totalKg, id: Date.now() });
+            qtyInput.value = '';
+            searchInput.value = '';
+            selectedProduct = null;
+            renderTable();
+        }
 
-  limpiarMapa();
-  document.getElementById('progreso').style.display = 'block';
+        function removeItem(id) {
+            items = items.filter(i => i.id !== id);
+            renderTable();
+        }
 
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const jsonData = XLSX.utils.sheet_to_json(sheet);
+        function clearAll() {
+            items = [];
+            renderTable();
+        }
 
-  nTot = jsonData.length;
+        function fmt(n) {
+            return n.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+        }
 
-  for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i];
-    const direccion = row["direccion de obra"];
-    const localidad = row["localidad"];
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const section = document.getElementById('resultsSection');
+            const empty = document.getElementById('emptyState');
 
-    const pct = Math.round(((i+1) / jsonData.length) * 100);
-    document.getElementById('barra').style.width = pct + '%';
-    document.getElementById('textoProgreso').textContent =
-      `Procesando ${i+1} de ${jsonData.length} — ${direccion || '(vacío)'}`;
+            if (!items.length) {
+                section.classList.remove('visible');
+                empty.style.display = 'block';
+                return;
+            }
 
-    if (!direccion || !localidad) { nErr++; cnt.err++; updStats(); continue; }
+            section.classList.add('visible');
+            empty.style.display = 'none';
 
-    const direccionCompleta = direccion + ", " + localidad + ", Argentina";
-    await geocodificar(direccionCompleta);
-    updStats();
-  }
+            tbody.innerHTML = items.map(item => `
+    <tr>
+      <td>
+        ${item.name}
+        <span class="td-unit-label">${item.cat}</span>
+      </td>
+      <td class="td-qty">${fmt(item.qty)}</td>
+      <td><span class="td-unit-label">${item.unit}</span></td>
+      <td>${fmt(item.kgPerUnit)} kg</td>
+      <td class="td-kg">${fmt(item.totalKg)} kg</td>
+      <td class="td-ton">${(item.totalKg / 1000).toLocaleString('es-AR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} t</td>
+      <td><button class="btn-remove" onclick="removeItem(${item.id})">✕</button></td>
+    </tr>
+  `).join('');
 
-  document.getElementById('textoProgreso').textContent =
-    `✓ Listo: ${nOk} ubicados, ${nErr} no encontrados`;
+            const totalKg = items.reduce((s, i) => s + i.totalKg, 0);
+            document.getElementById('totalKg').textContent = fmt(totalKg) + ' KG';
+            document.getElementById('totalTon').textContent = (totalKg / 1000).toLocaleString('es-AR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' toneladas';
+        }
 
-  const todos = Object.values(markers).flat();
-  if (todos.length > 0) {
-    try { map.fitBounds(L.featureGroup(todos).getBounds(), { padding:[50,50] }); } catch(e){}
-  }
-}
-
-// ── GEOCODIFICAR — idéntico al original ──────────────────────────────────
-async function geocodificar(direccion) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.length > 0) {
-      const lat  = parseFloat(data[0].lat);
-      const lon  = parseFloat(data[0].lon);
-      const zona = getZona(lat, lon);
-      const col  = ZCOLORS[zona];
-
-      const icon = L.divIcon({
-        html: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
-          <path d="M16 0C7.2 0 0 7.2 0 16c0 10.5 16 26 16 26S32 26.5 32 16C32 7.2 24.8 0 16 0z"
-                fill="${col}" stroke="white" stroke-width="2.5"/>
-          <circle cx="16" cy="16" r="5" fill="white" opacity="0.85"/>
-        </svg>`,
-        className: '',
-        iconSize: [32, 42],
-        iconAnchor: [16, 42],
-        popupAnchor: [0, -44]
-      });
-
-      const mk = L.marker([lat, lon], { icon })
-        .addTo(map)
-        .bindPopup(`
-          <div style="font-size:13px;min-width:200px">
-            <div style="font-weight:bold;line-height:1.4">${direccion}</div>
-            <div style="font-size:11px;color:#777;margin-top:4px">lat: ${lat.toFixed(5)} / lon: ${lon.toFixed(5)}</div>
-          </div>
-        `);
-
-      markers[zona].push(mk);
-      cnt[zona]++;
-      nOk++;
-      addLog(direccion, zona, false);
-    } else {
-      cnt.err++; nErr++;
-      addLog(direccion, null, true);
-    }
-  } catch (error) {
-    cnt.err++; nErr++;
-    addLog(direccion + ' (error de red)', null, true);
-  }
-  await new Promise(resolve => setTimeout(resolve, 1000));
-}
-
-</script>
+        renderTable();
+    </script>
 </body>
+
 </html>
